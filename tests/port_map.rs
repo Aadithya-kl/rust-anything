@@ -207,3 +207,48 @@ fn map_refuses_a_file_instead_of_printing_an_empty_map() {
     let _ = std::fs::remove_dir_all(&root);
     let _ = std::fs::remove_file(&file);
 }
+
+#[test]
+fn one_unit_bridged_twice_counts_as_one_unit() {
+    let repo = std::env::temp_dir().join(format!("ra-map-twice-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&repo);
+    std::fs::create_dir_all(repo.join("src")).unwrap();
+    std::fs::write(
+        repo.join("package.json"),
+        "{\"name\":\"app\",\"version\":\"1.0.0\"}\n",
+    )
+    .unwrap();
+    std::fs::write(
+        repo.join("src/math.ts"),
+        "export function add(a: number, b: number): number { return a + b; }\n",
+    )
+    .unwrap();
+    for out in ["rust/math-rs", "rust/mathn"] {
+        bridge::bridge(&bridge::Options {
+            root: &repo,
+            unit: "src/math.ts",
+            kind: None,
+            out: Some(repo.join(out)),
+            name: None,
+            force: false,
+            keep: Vec::new(),
+            lang: None,
+            batch: Vec::new(),
+            as_json: Vec::new(),
+            allocator: Default::default(),
+        })
+        .unwrap();
+    }
+
+    let map = port_map::map(&repo, &[]).unwrap();
+    assert!(map.analyze_error.is_none(), "{:?}", map.analyze_error);
+    let text = port_map::markdown(&map);
+    assert!(text.contains("1 of 1 unit has a Rust port"), "{text}");
+    // The table still has a row per crate.
+    assert!(
+        text.contains("| `src/math.ts` | `rust/math-rs` |"),
+        "{text}"
+    );
+    assert!(text.contains("| `src/math.ts` | `rust/mathn` |"), "{text}");
+    let _ = std::fs::remove_dir_all(&repo);
+}
