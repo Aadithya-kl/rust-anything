@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `map` counts units, not crates, in its first line: one unit bridged twice (napi and wasm, or a
+  second `bridge --out`) reads `1 of 1 unit has a Rust port` instead of `2 of 2 units have`. The
+  Ports table still lists every crate (#609 by @Aadithya-kl).
+
 ## 5.0.0 (2026-11-25)
 
 The old program is the judge, now with sharper eyes: every mismatch says where it starts and
