@@ -69,6 +69,15 @@ pub struct Glue {
 }
 
 impl PortMap {
+    /// Units with at least one port. `ports` has a row per crate, and one unit can have several
+    /// (napi and wasm, or a second `bridge --out`).
+    pub fn ported_units(&self) -> usize {
+        let mut units: Vec<&str> = self.ports.iter().map(|p| p.unit.as_str()).collect();
+        units.sort_unstable();
+        units.dedup();
+        units.len()
+    }
+
     pub fn changed(&self) -> usize {
         self.ports
             .iter()
@@ -286,11 +295,12 @@ fn render(out: &mut String, map: &PortMap) -> std::fmt::Result {
         |n| n.to_string_lossy().into(),
     );
     writeln!(out, "# Port map: {name}\n")?;
-    let total = map.ports.len() + map.not_ported.len() + map.covered_by_broken;
+    let ported = map.ported_units();
+    let total = ported + map.not_ported.len() + map.covered_by_broken;
     write!(
         out,
         "{} of {} {} a Rust port",
-        map.ports.len(),
+        ported,
         if map.analyze_error.is_some() {
             "the".to_string()
         } else {
